@@ -1,0 +1,512 @@
+type: edu
+files:
+  - name: src/gitinternals/Main.kt
+    visible: true
+    text: |
+      package gitinternals
+      
+      import java.io.FileInputStream
+      import java.time.Instant
+      import java.time.ZoneOffset
+      import java.util.zip.InflaterInputStream
+      
+      
+      const val absolutePath = "%s/objects/%s/%s"
+      const val personCommit = "%s: %s %s %s timestamp: %s %s"
+      
+      class Commit(listContent: List<String>) {
+          private val content = mutableMapOf("type" to "*COMMIT*", "tree" to "", "parents" to "", "author" to "", "committer" to "", "message" to "")
+          private val commitMessageLines = mutableListOf<String>()
+      
+          init {
+              for (line in listContent) {
+                  when (line.split(" ").first()) {
+                      "tree" ->  content["tree"] = line.replace(" ", ": ")
+                      "parent" -> content["parents"] = if (content["parents"]!!.isEmpty()) line.replace("parent ", "parents: ") else "${content["parents"]} | ${line.split(" ").last()}"
+                      "author" ->  content["author"] = formatString(line, "original")
+                      "committer" -> content["committer"] = formatString(line, "commit")
+                      "" -> continue
+                      else -> commitMessageLines.add(line)
+                  }
+              }
+          }
+      
+          private fun formatString(line: String, word: String): String {
+              val myLine = line.split(" ")
+              val time = formatDate(myLine[3].toLong(),myLine[4])
+              val email = myLine[2].replace(Regex("""[<>]"""), "")
+              val utc = StringBuilder(myLine[4]).insert(3, ":").toString()
+              return personCommit.format(myLine[0], myLine[1], email, word, time, utc)
+      
+          }
+      
+          private fun formatDate(seconds: Long, utc: String): String{
+              val timeDifference = utc.substring(1, 3).toLong()
+              val date = Instant.ofEpochSecond(seconds).atOffset(ZoneOffset.UTC).toLocalDateTime()
+              return if (utc.first() == '+') {
+                  date.plusHours(timeDifference).toString().replace("T", " ")
+              } else {
+                  date.minusHours(timeDifference).toString().replace("T", " ")
+              }
+          }
+      
+          fun printCommit() {
+              for (line in content.values) {
+                  if (line.isNotEmpty()) println(line)
+              }
+              println("commit message:")
+              println(commitMessageLines.joinToString("\n"))
+          }
+      }
+      
+      class Blob(private val content: List<String>) {
+          fun printBlob() {
+              println("*BLOB*")
+              println(content.joinToString("\n"))
+          }
+      }
+      
+      class Tree(content: MutableList<String>) {
+          private val group = mutableListOf<Triple<String, String, String>>()
+      
+          init {
+              for (i in 0 until content.size - 1) {
+                  val (metaNumber, fileName) = content[i].split(" ")
+                  val hash = transformHashToString(content[i + 1].take(20))
+                  content[i + 1] = content[i + 1].substring(20)
+                  val anElement = Triple(metaNumber, hash, fileName)
+                  group.add(anElement)
+              }
+          }
+      
+          private fun transformHashToString(hash: String): String {
+              val hex = hash.map { (it.code and 0xFF).toString(16).padStart(2, '0') }
+              return hex.joinToString("")
+          }
+      
+          fun printTree() {
+              println("*TREE*")
+              group.forEach { println("${it.first} ${it.second} ${it.third}") }
+          }
+      
+      }
+      
+      class Git {
+          fun searchFile() {
+              val directory = println("Enter .git directory location:").run { readln() }
+              val objectHash = println("Enter git object hash:").run { readln() }
+      
+              val filePath = absolutePath.format(directory,objectHash.take(2), objectHash.drop(2))
+              val inflate = InflaterInputStream(FileInputStream(filePath)).readAllBytes().map { Char(it.toUShort()) }.joinToString("").split("\u0000")
+              val element = inflate.joinToString("\n").split("\n")
+      
+              when (element.first().split(" ").first()) {
+                  "commit" -> Commit(element.drop(1)).printCommit()
+                  "blob" -> Blob(element.drop(1)).printBlob()
+                  "tree" -> Tree(element.drop(1).toMutableList()).printTree()
+              }
+          }
+      }
+      
+      fun main() {
+          val vcs = Git()
+          vcs.searchFile()
+      }
+    learner_created: false
+  - name: test/gitone/objects/0e/ee6a98471a350b2c2316313114185ecaf82f0e
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gitone/objects/10/9e8050b41bd10b81be0a51a5e67327f5609551
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gitone/objects/12/a4717e84b5e414f93cc91ca50a6d5a6c3563a0
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gitone/objects/2b/26c15c04375d90203783fb4c2a45ff04b571a6
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gitone/objects/30/0b1c67b5539bfdcb30f2863d6ac3b3377ad00b
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gitone/objects/31/d679c1c2b8fc787ae014c501d4fa6545faa138
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gitone/objects/41/07cf41cf55c4fd38e9da8f3d08d1eaefc3254a
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gitone/objects/43/6f2e7402dc154922dfb3f5513605bb5e3e929c
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gitone/objects/49/0f96725348e92770d3c6bab9ec532564b7ebe0
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gitone/objects/4a/8abe7b618ddf9c55adbea359ce891775794a61
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gitone/objects/4e/33b9879a28ce8462b599fda71625f717ec8b8b
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gitone/objects/61/8383db6d7ee3bd2e97b871205f113b6a3ba854
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gitone/objects/6d/537a47eddc11f866bcc2013703bf31bfcf9ed8
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gitone/objects/73/324685d9dbd1fdda87f3c5c6f77d79c1b769c2
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gitone/objects/74/198c849dbbcd51d060c59253a4757eedb9bd12
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gitone/objects/75/1543c76e07eeb88c1ef5ed5a0a0b15a2f9f875
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gitone/objects/79/401ddb0e2c0fe0472c813754dd4a8873b66a84
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gitone/objects/86/68fe82df35b37902b619ca29028fa59c496532
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gitone/objects/97/e638cc1c7135580c3ff93162e727148e1bad05
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gitone/objects/a7/b882bbf2db5d90287e9affc7e6f3b3c740b327
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gitone/objects/a8/7a4a0e9fcf5a8a091c54909b674ac2a051f5e8
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gitone/objects/ac/2731ee243bb1111dd93916bb3296ee7f7e23ef
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gitone/objects/ad/3a818dc87b9940935b24a5aa93fac00f086bf9
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gitone/objects/b6/28add5fd4be3bdd2cdb776dfa035cc69956859
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gitone/objects/c1/6289b5404b12681ffa9e81ea072432a515ad8d
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gitone/objects/c2/d888ec7f06b71b5ec8712b0464d1ca7a0a9ffc
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gitone/objects/da/5c94c98ad34735a539a0f90d0e9c6bba779792
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gitone/objects/e1/7273ae31b753dad1fe5ee0ef3e5878a21bd3f9
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gitone/objects/e8/1d4d80d93921c28e985925c6d42b4b42d8758c
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gitone/objects/ed/09032dc1c2d1650f823e3332876483d2e9625f
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gitone/objects/f6/74b5d3a4c6cef5815b4e72ef2ea1bbe46b786b
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gitone/objects/fb/043556c251cb450a0d55e4ceb1ff35e12029c3
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gitone/objects/fd/362f3f305819d17b4359444aa83e17e7d6924a
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gitone/objects/fe/853d1f316ab467d355f9de48182958780b35b5
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gitone/refs/heads/feature1
+    visible: false
+    text: |
+      300b1c67b5539bfdcb30f2863d6ac3b3377ad00b
+    learner_created: false
+  - name: test/gitone/refs/heads/feature2
+    visible: false
+    text: |
+      97e638cc1c7135580c3ff93162e727148e1bad05
+    learner_created: false
+  - name: test/gitone/refs/heads/master
+    visible: false
+    text: |
+      fd362f3f305819d17b4359444aa83e17e7d6924a
+    learner_created: false
+  - name: test/gitone/HEAD
+    visible: false
+    text: |
+      ref: refs/heads/master
+    learner_created: false
+  - name: test/gittwo/objects/1d/857ef13958afdae2e00b202b5fe2c3a83de149
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gittwo/objects/31/cddcbd00e715688cd127ad20c2846f9ed98223
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gittwo/objects/3c/0e6c4910ad597132266abb89c74277be7731ea
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gittwo/objects/5a/d3239e54ba7c533d9f215a13ac82d14197cd8f
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gittwo/objects/60/09101760644963fee389fc730acc4c437edc8f
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gittwo/objects/83/02242a39971d4daa63e2db5b2b46d6f7fca44d
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gittwo/objects/91/01792ba81555220fc075044a06ed98de225895
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gittwo/objects/a0/423896973644771497bdc03eb99d5281615b51
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gittwo/objects/aa/a96ced2d9a1c8e72c56b253a0e2fe78393feb7
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gittwo/objects/b9/e517fc3149863d47c382680ecdace0b6dbdeef
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gittwo/objects/bb/d3e996989fc1b1e4bb9002d4c5d32f992c9eb3
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gittwo/objects/c5/e4a1239e11e51e95b051e2f25c3325b5004676
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gittwo/objects/ce/013625030ba8dba906f756967f9e9ca394464a
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gittwo/objects/d1/28f76a96c56ac4373717d3fbba4fa5875ca68f
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gittwo/objects/d2/c5bedbb2c46945fd84f2ad209a7d4ee047f7f9
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gittwo/objects/dc/ec4e51e2ce4a46a6206d0d4ab33fa99d8b1ab5
+    visible: false
+    is_binary: true
+    learner_created: false
+  - name: test/gittwo/refs/heads/helloWithFeature1
+    visible: false
+    text: |
+      c5e4a1239e11e51e95b051e2f25c3325b5004676
+    learner_created: false
+  - name: test/gittwo/refs/heads/helloWithFeature2
+    visible: false
+    text: |
+      d2c5bedbb2c46945fd84f2ad209a7d4ee047f7f9
+    learner_created: false
+  - name: test/gittwo/refs/heads/main
+    visible: false
+    text: |
+      dcec4e51e2ce4a46a6206d0d4ab33fa99d8b1ab5
+    learner_created: false
+  - name: test/gittwo/HEAD
+    visible: false
+    text: |
+      ref: refs/heads/main
+    learner_created: false
+  - name: test/GitInternalsTest.java
+    visible: false
+    text: |
+      import org.hyperskill.hstest.stage.StageTest;
+      import org.hyperskill.hstest.testcase.CheckResult;
+      import org.hyperskill.hstest.testcase.TestCase;
+      
+      import java.util.Arrays;
+      import java.util.List;
+      
+      // version 1.2
+      public class GitInternalsTest extends StageTest<List<String>> {
+      
+          private final String gitOnePath = "test/gitone\n";
+          private final String gitTwoPath = "test/gittwo\n";
+      
+          @Override
+          public List<TestCase<List<String>>> generate() {
+      
+              return Arrays.asList(
+                      new TestCase<List<String>>()
+                              .setInput(
+                                      gitOnePath +
+                                              "cat-file\n" +
+                                              "0eee6a98471a350b2c2316313114185ecaf82f0e\n")
+                              .setAttach(Arrays.asList(
+                                      "Enter .git directory location:",
+                                      "Enter command:",
+                                      "Enter git object hash:",
+                                      "*COMMIT*",
+                                      "tree: 79401ddb0e2c0fe0472c813754dd4a8873b66a84",
+                                      "parents: 12a4717e84b5e414f93cc91ca50a6d5a6c3563a0",
+                                      "author: Smith mr.smith@matrix original timestamp: 2020-03-29 17:18:20 +03:00",
+                                      "committer: Cypher cypher@matrix commit timestamp: 2020-03-29 17:25:52 +03:00",
+                                      "commit message:",
+                                      "get docs from feature1")),
+                      new TestCase<List<String>>()
+                              .setInput(
+                                      gitOnePath +
+                                              "cat-file\n" +
+                                              "490f96725348e92770d3c6bab9ec532564b7ebe0\n")
+                              .setAttach(Arrays.asList(
+                                      "Enter .git directory location:",
+                                      "Enter command:",
+                                      "Enter git object hash:",
+                                      "*BLOB*",
+                                      "fun main() {",
+                                      "    while(true) {",
+                                      "        println(\"Hello Hyperskill student!\")",
+                                      "    }",
+                                      "} ")),
+                      new TestCase<List<String>>()
+                              .setInput(
+                                      gitOnePath +
+                                              "cat-file\n" +
+                                              "fb043556c251cb450a0d55e4ceb1ff35e12029c3\n")
+                              .setAttach(Arrays.asList(
+                                      "Enter .git directory location:",
+                                      "Enter command:",
+                                      "Enter git object hash:",
+                                      "*TREE*",
+                                      "100644 2b26c15c04375d90203783fb4c2a45ff04b571a6 main.kt",     //fixed
+                                      "100644 4a8abe7b618ddf9c55adbea359ce891775794a61 readme.txt")),
+                      new TestCase<List<String>>()
+                              .setInput(
+                                      gitOnePath +
+                                              "list-branches\n")
+                              .setAttach(Arrays.asList(
+                                      "Enter .git directory location:",
+                                      "Enter command:",
+                                      "  feature1",
+                                      "  feature2",
+                                      "* master")),
+                      new TestCase<List<String>>()  // added
+                              .setInput(
+                                      gitTwoPath +
+                                              "cat-file\n" +
+                                              "31cddcbd00e715688cd127ad20c2846f9ed98223\n")
+                              .setAttach(Arrays.asList(
+                                      "Enter .git directory location:",
+                                      "Enter command:",
+                                      "Enter git object hash:",
+                                      "*COMMIT*",
+                                      "tree: aaa96ced2d9a1c8e72c56b253a0e2fe78393feb7",
+                                      "author: Kalinka Kali.k4@email.com original timestamp: 2021-12-11 22:31:36 -03:00",
+                                      "committer: Kalinka Kali.k4@email.com commit timestamp: 2021-12-11 22:31:36 -03:00",
+                                      "commit message:",
+                                      "simple hello")),
+                      new TestCase<List<String>>()  // added
+                              .setInput(
+                                      gitTwoPath +
+                                              "cat-file\n" +
+                                              "dcec4e51e2ce4a46a6206d0d4ab33fa99d8b1ab5\n")
+                              .setAttach(Arrays.asList(
+                                      "Enter .git directory location:",
+                                      "Enter command:",
+                                      "Enter git object hash:",
+                                      "*COMMIT*",
+                                      "tree: d128f76a96c56ac4373717d3fbba4fa5875ca68f",
+                                      "parents: 5ad3239e54ba7c533d9f215a13ac82d14197cd8f | d2c5bedbb2c46945fd84f2ad209a7d4ee047f7f9",
+                                      "author: Kalinka Kali.k4@email.com original timestamp: 2021-12-11 22:49:02 -03:00",
+                                      "committer: Kalinka Kali.k4@email.com commit timestamp: 2021-12-11 22:49:02 -03:00",
+                                      "commit message:",
+                                      "awsome hello")),
+                      new TestCase<List<String>>()  // added
+                              .setInput(
+                                      gitTwoPath +
+                                              "cat-file\n" +
+                                              "aaa96ced2d9a1c8e72c56b253a0e2fe78393feb7\n")
+                              .setAttach(Arrays.asList(
+                                      "Enter .git directory location:",
+                                      "Enter command:",
+                                      "Enter git object hash:",
+                                      "*TREE*",
+                                      "100644 ce013625030ba8dba906f756967f9e9ca394464a hello.txt")),
+                      new TestCase<List<String>>()  // added
+                              .setInput(
+                                      gitTwoPath +
+                                              "list-branches\n")
+                              .setAttach(Arrays.asList(
+                                      "Enter .git directory location:",
+                                      "Enter command:",
+                                      "  helloWithFeature1",
+                                      "  helloWithFeature2",
+                                      "* main"))
+              );
+          }
+      
+          @Override
+          public CheckResult check(String reply, List<String> expectedOutput) {
+              List<String> lines = Arrays.asList(reply.split("(\\r\\n|\\r|\\n)"));
+      
+              if (lines.size() != expectedOutput.size()) {
+                  return CheckResult.wrong(String.format(
+                          "Number of lines in your output (%d) does not match expected value(%d)",
+                          lines.size(), expectedOutput.size()));
+              }
+      
+              for (int i = 0; i < lines.size(); i++) {
+                  if (!lines.get(i).equals(expectedOutput.get(i))) {
+                      return CheckResult.wrong(String.format(
+                              "Output text at line (%d) (%s) does not match expected (%s)",
+                              i, lines.get(i), expectedOutput.get(i)));
+                  }
+              }
+      
+      
+              return CheckResult.correct();
+          }
+      }
+    learner_created: false
+feedback_link: https://hyperskill.org/projects/110/stages/599/implement#comment
+status: Solved
+feedback:
+  message: Congratulations!
+  time: "Tue, 02 Apr 2024 14:05:24 UTC"
+record: 5
