@@ -93,6 +93,8 @@ class Tree(content: MutableList<String>) {
         return hex.joinToString("")
     }
 
+    fun getGroup(): MutableList<Triple<String, String, String>> = group
+
     fun printTree() {
         println("*TREE*")
         group.forEach { println("${it.first} ${it.second} ${it.third}") }
@@ -109,6 +111,7 @@ class Git {
             "cat-file" -> printGitObject(directory)
             "list-branches" -> printBranches(directory)
             "log" -> log(directory)
+            "commit-tree" -> commitTree(directory)
         }
     }
 
@@ -170,6 +173,42 @@ class Git {
             }
         }
     }
+
+    private fun commitTree(directory: String) {
+        val commitHash = println("Enter commit-hash:").run { readln() }
+
+        val filePath = absolutePath.format(directory,commitHash.take(2), commitHash.drop(2).trim())
+        val inflate = InflaterInputStream(FileInputStream(filePath)).readAllBytes().map { Char(it.toUShort()) }.joinToString("").split("\u0000")
+        val element = inflate.joinToString("\u0000").split("\u0000")
+        val treeHash = element.joinToString("\n").split("\n")[1].split(" ").last()
+        val tree = getTree(directory, treeHash)
+        val treeContent = mutableListOf<String>()
+
+        for (file in tree.getGroup()) {
+            if (file.third.contains(".")) {
+                treeContent.add(file.third)
+            } else {
+                val content = "${file.third}/" + getSubFile(directory, file.second)
+                treeContent.add(content)
+            }
+        }
+        treeContent.forEach { println(it) }
+    }
+
+    private fun getTree(directory: String, treeHash: String): Tree {
+        val filePath = absolutePath.format(directory,treeHash.take(2), treeHash.drop(2).trim())
+        val inflate = InflaterInputStream(FileInputStream(filePath)).readAllBytes().map { Char(it.toUShort()) }.joinToString("").split("\u0000")
+        val element = inflate.joinToString("\u0000").split("\u0000")
+        return Tree(element.joinToString("\n").split("\n").drop(1).toMutableList())
+    }
+
+    private fun getSubFile(directory: String, treeHash: String): String {
+        val filePath = absolutePath.format(directory,treeHash.take(2), treeHash.drop(2).trim())
+        val inflate = InflaterInputStream(FileInputStream(filePath)).readAllBytes().map { Char(it.toUShort()) }.joinToString("").split("\u0000")
+        val element = inflate.joinToString("\u0000").split("\u0000")
+        return Tree(element.joinToString("\n").split("\n").drop(1).toMutableList()).getGroup().first().third
+    }
+
 }
 
 fun main() {
