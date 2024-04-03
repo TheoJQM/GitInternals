@@ -6,7 +6,6 @@ import java.time.Instant
 import java.time.ZoneOffset
 import java.util.zip.InflaterInputStream
 
-
 const val absolutePath = "%s\\objects\\%s\\%s"
 const val personCommit = "%s: %s %s %s timestamp: %s %s"
 val logCommit = """
@@ -33,14 +32,12 @@ class Commit(listContent: List<String>) {
         }
     }
 
-
     private fun formatString(line: String, word: String): String {
         val myLine = line.split(" ")
         val time = formatDate(myLine[3].toLong(),myLine[4])
         val email = myLine[2].replace(Regex("""[<>]"""), "")
         val utc = StringBuilder(myLine[4]).insert(3, ":").toString()
         return personCommit.format(myLine[0], myLine[1], email, word, time, utc)
-
     }
 
     private fun formatDate(seconds: Long, utc: String): String{
@@ -58,14 +55,10 @@ class Commit(listContent: List<String>) {
     fun getMessage() = commitMessageLines.joinToString("\n")
 
     fun printCommit() {
-        for (line in content.values) {
-            if (line.isNotEmpty()) println(line)
-        }
+        for (line in content.values) if (line.isNotEmpty()) println(line)
         println("commit message:")
         println(commitMessageLines.joinToString("\n"))
     }
-
-
 }
 
 class Blob(private val content: List<String>) {
@@ -99,14 +92,13 @@ class Tree(content: MutableList<String>) {
         println("*TREE*")
         group.forEach { println("${it.first} ${it.second} ${it.third}") }
     }
-
 }
 
 class Git {
     fun searchFile() {
         val directory = println("Enter .git directory location:").run { readln() }
-
         val command = println("Enter command:").run{ readln()}
+
         when (command) {
             "cat-file" -> printGitObject(directory)
             "list-branches" -> printBranches(directory)
@@ -117,9 +109,7 @@ class Git {
 
     private fun printGitObject(directory: String) {
         val objectHash = println("Enter git object hash:").run { readln() }
-        val filePath = absolutePath.format(directory,objectHash.take(2), objectHash.drop(2))
-        val inflate = InflaterInputStream(FileInputStream(filePath)).readAllBytes().map { Char(it.toUShort()) }.joinToString("").split("\u0000")
-        val element = inflate.joinToString("\u0000").split("\u0000")
+        val element = getObject(directory, objectHash)
 
         when (element.first().split(" ").first()) {
             "commit" -> Commit(element.joinToString("\n").split("\n").drop(1)).printCommit()
@@ -131,9 +121,7 @@ class Git {
     private fun printBranches(directory: String) {
         val currentBranch = File("$directory\\HEAD").readText().split("/").last().trim()
         val branches = File("$directory\\refs\\heads").list()
-        branches?.forEach {
-            println(if (it.equals(currentBranch)) "* $it" else "  $it")
-        }
+        branches?.forEach { println(if (it.equals(currentBranch)) "* $it" else "  $it") }
     }
 
     private fun log(directory: String) {
@@ -142,44 +130,34 @@ class Git {
         val listCommit = getAllCommit(directory, commitHash)
 
         listCommit.forEach { println(it)}
-
     }
 
     private fun getAllCommit(directory: String, commitHash: String, merged: Boolean = false): MutableList<String> {
-        val filePath = absolutePath.format(directory,commitHash.take(2), commitHash.drop(2).trim())
-        val inflate = InflaterInputStream(FileInputStream(filePath)).readAllBytes().map { Char(it.toUShort()) }.joinToString("").split("\u0000")
-        val element = inflate.joinToString("\u0000").split("\u0000")
+        val element = getObject(directory, commitHash)
+        val list = mutableListOf<String>()
 
         val newCommit = Commit(element.joinToString("\n").split("\n").drop(1))
         val committer = newCommit.getCommitter().split(" ").drop(1).joinToString(" ")
         val message = newCommit.getMessage()
         val parent = newCommit.getParent().split(" | ")
-        val list = mutableListOf<String>()
 
-        if (merged) {
-            list.add(logCommit.format(commitHash.trim() + " (merged)", committer, message))
-        } else {
-            list.add(logCommit.format(commitHash.trim(), committer, message))
-        }
+        val commitHeader = if (merged) "$commitHash (merged)" else commitHash
+        list.add(logCommit.format(commitHeader.trim(), committer, message))
 
         when {
             parent.size == 1 && parent.first().isEmpty()  || merged -> return list
             else -> {
-                if (parent.size == 2) {
-                    list += getAllCommit(directory, parent.last(), true)
-                }
+                if (parent.size == 2) list += getAllCommit(directory, parent.last(), true)
                 list += getAllCommit(directory, parent.first())
-                return list
             }
         }
+        return list
     }
 
     private fun commitTree(directory: String) {
         val commitHash = println("Enter commit-hash:").run { readln() }
+        val element = getObject(directory, commitHash)
 
-        val filePath = absolutePath.format(directory,commitHash.take(2), commitHash.drop(2).trim())
-        val inflate = InflaterInputStream(FileInputStream(filePath)).readAllBytes().map { Char(it.toUShort()) }.joinToString("").split("\u0000")
-        val element = inflate.joinToString("\u0000").split("\u0000")
         val treeHash = element.joinToString("\n").split("\n")[1].split(" ").last()
         val tree = getTree(directory, treeHash)
         val treeContent = mutableListOf<String>()
@@ -196,19 +174,20 @@ class Git {
     }
 
     private fun getTree(directory: String, treeHash: String): Tree {
-        val filePath = absolutePath.format(directory,treeHash.take(2), treeHash.drop(2).trim())
-        val inflate = InflaterInputStream(FileInputStream(filePath)).readAllBytes().map { Char(it.toUShort()) }.joinToString("").split("\u0000")
-        val element = inflate.joinToString("\u0000").split("\u0000")
+        val element = getObject(directory, treeHash)
         return Tree(element.joinToString("\n").split("\n").drop(1).toMutableList())
     }
 
     private fun getSubFile(directory: String, treeHash: String): String {
-        val filePath = absolutePath.format(directory,treeHash.take(2), treeHash.drop(2).trim())
-        val inflate = InflaterInputStream(FileInputStream(filePath)).readAllBytes().map { Char(it.toUShort()) }.joinToString("").split("\u0000")
-        val element = inflate.joinToString("\u0000").split("\u0000")
+        val element = getObject(directory, treeHash)
         return Tree(element.joinToString("\n").split("\n").drop(1).toMutableList()).getGroup().first().third
     }
 
+    private fun getObject(directory: String, hash: String): List<String> {
+        val filePath = absolutePath.format(directory,hash.take(2), hash.drop(2).trim())
+        val inflate = InflaterInputStream(FileInputStream(filePath)).readAllBytes().map{ Char(it.toUShort()) }.joinToString("").split("\u0000")
+        return inflate.joinToString("\u0000").split("\u0000")
+    }
 }
 
 fun main() {
