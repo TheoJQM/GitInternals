@@ -626,55 +626,9 @@ files:
           }
       }
     learner_created: false
-feedback_link: https://hyperskill.org/projects/110/stages/600/implement#comment
-status: Failed
+feedback_link: https://hyperskill.org/learn/step/9842#comment
+status: Solved
 feedback:
-  message: |-
-    Wrong answer in test #5
-
-    Number of lines in your output (34) does not match expected value(42)
-
-    Please find below the output of your program during this failed test.
-    Note that the &#39;&gt;&#39; character indicates the beginning of the input line.
-
-    ---
-
-    Enter .git directory location:
-    &gt; test/gitone
-    Enter command:
-    &gt; log
-    Enter branch name:
-    &gt; master
-    Commit: fd362f3f305819d17b4359444aa83e17e7d6924a
-    Neo neo@matrix commit timestamp: 2020-04-04 11:42:08 +03:00
-    add subfolder
-
-    Commit: 39a0337532d7720acc90497043e2ade92c386939
-    Neo neo@matrix commit timestamp: 2020-04-04 09:59:23 +03:00
-    this commit message will have multiple lines
-    we need multiple lines commit message for test purposes
-    3
-    4
-    5
-
-    Commit: 6d537a47eddc11f866bcc2013703bf31bfcf9ed8
-    Cypher cypher@matrix commit timestamp: 2020-03-29 17:29:08 +03:00
-    Merge branch &#39;feature2&#39;
-
-    Commit: 97e638cc1c7135580c3ff93162e727148e1bad05
-    Cypher cypher@matrix commit timestamp: 2020-03-29 17:27:35 +03:00
-    break our software
-
-    Commit: 0eee6a98471a350b2c2316313114185ecaf82f0e
-    Cypher cypher@matrix commit timestamp: 2020-03-29 17:25:52 +03:00
-    get docs from feature1
-
-    Commit: 12a4717e84b5e414f93cc91ca50a6d5a6c3563a0
-    Neo mr.anderson@matrix commit timestamp: 2020-03-29 17:12:52 +03:00
-    start kotlin project
-
-    Commit: 73324685d9dbd1fdda87f3c5c6f77d79c1b769c2
-    Neo mr.anderson@matrix commit timestamp: 2020-03-29 17:10:52 +03:00
-    initial commit
-  time: "Tue, 02 Apr 2024 18:16:34 UTC"
-record: -1
+  message: Congratulations!
+  time: "Wed, 03 Apr 2024 06:52:53 UTC"
+record: 6

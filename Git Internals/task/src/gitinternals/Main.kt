@@ -7,7 +7,7 @@ import java.time.ZoneOffset
 import java.util.zip.InflaterInputStream
 
 
-const val absolutePath = "%s/objects/%s/%s"
+const val absolutePath = "%s\\objects\\%s\\%s"
 const val personCommit = "%s: %s %s %s timestamp: %s %s"
 val logCommit = """
     Commit: %s
@@ -53,7 +53,7 @@ class Commit(listContent: List<String>) {
         }
     }
 
-    fun getParent() = content["parents"]!!
+    fun getParent() = content["parents"]!!.removePrefix("parents: ")
     fun getCommitter() =  content["committer"]!!
     fun getMessage() = commitMessageLines.joinToString("\n")
 
@@ -142,32 +142,37 @@ class Git {
 
     }
 
-    private fun getAllCommit(directory: String, commitHash: String): MutableList<String> {
+    private fun getAllCommit(directory: String, commitHash: String, merged: Boolean = false): MutableList<String> {
         val filePath = absolutePath.format(directory,commitHash.take(2), commitHash.drop(2).trim())
         val inflate = InflaterInputStream(FileInputStream(filePath)).readAllBytes().map { Char(it.toUShort()) }.joinToString("").split("\u0000")
         val element = inflate.joinToString("\u0000").split("\u0000")
 
-
         val newCommit = Commit(element.joinToString("\n").split("\n").drop(1))
         val committer = newCommit.getCommitter().split(" ").drop(1).joinToString(" ")
         val message = newCommit.getMessage()
-        val parent = newCommit.getParent()
-        val list = mutableListOf(logCommit.format(commitHash.trim(), committer, message))
+        val parent = newCommit.getParent().split(" | ")
+        val list = mutableListOf<String>()
 
-        if (parent.isEmpty()) {
-            return list
+        if (merged) {
+            list.add(logCommit.format(commitHash.trim() + " (merged)", committer, message))
         } else {
-            list += getAllCommit(directory, parent.split(" ").last())
-            return list
+            list.add(logCommit.format(commitHash.trim(), committer, message))
         }
 
-
+        when {
+            parent.size == 1 && parent.first().isEmpty()  || merged -> return list
+            else -> {
+                if (parent.size == 2) {
+                    list += getAllCommit(directory, parent.last(), true)
+                }
+                list += getAllCommit(directory, parent.first())
+                return list
+            }
+        }
     }
 }
 
 fun main() {
     val vcs = Git()
     vcs.searchFile()
-
-
 }
